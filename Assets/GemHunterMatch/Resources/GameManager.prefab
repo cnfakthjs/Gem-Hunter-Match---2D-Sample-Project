@@ -361,6 +361,8 @@ MonoBehaviour:
     Item: {fileID: 11400000, guid: b37a5206a85e15440865697e559cf2b3, type: 2}
   - Amount: 2
     Item: {fileID: 11400000, guid: 3d73d22e97a64db4e9bfee4dfe1df1f6, type: 2}
+  - Amount: 2
+    Item: {fileID: 11400000, guid: b766e9f4709bf9e4da43888ac820797e, type: 2}
 --- !u!1 &5493004279429478352
 GameObject:
   m_ObjectHideFlags: 0
@@ -439,6 +441,7 @@ MonoBehaviour:
   m_DeselectOnBackgroundClick: 1
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
+  m_ScrollDeltaPerTick: 6
 --- !u!1001 &5899088017058602465
 PrefabInstance:
   m_ObjectHideFlags: 0
