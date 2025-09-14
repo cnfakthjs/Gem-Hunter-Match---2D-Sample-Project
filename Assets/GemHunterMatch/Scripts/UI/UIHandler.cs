@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using Unity.VisualScripting;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -611,6 +613,46 @@ namespace Match3
             }
         }
 
+        private void EnsureEnoughSlots()
+        {
+            int neededSlots = GameManager.Instance.BonusItems.Count;
+            int currentSlots = m_BottomBarRoot.childCount;
+
+            // 如果需要更多 slots
+            if (neededSlots > currentSlots && currentSlots > 0)
+            {
+                for (int i = currentSlots; i < neededSlots; i++)
+                {
+                    // 手動創建新的 slot 結構
+                    var newSlot = new VisualElement();
+                    newSlot.style.flexDirection = FlexDirection.Column;
+                    newSlot.style.alignItems = Align.Center;
+
+                    var imageBooster = new VisualElement();
+                    imageBooster.name = "ImageBooster";
+                    imageBooster.style.width = 64;
+                    imageBooster.style.height = 64;
+
+                    var buttonBooster = new Button();
+                    buttonBooster.name = "ButtonBooster";
+                    buttonBooster.style.width = 64;
+                    buttonBooster.style.height = 64;
+
+                    var labelNumber = new Label();
+                    labelNumber.name = "LabelBoosterNumber";
+                    labelNumber.style.position = Position.Absolute;
+                    labelNumber.style.bottom = 0;
+                    labelNumber.style.right = 0;
+
+                    newSlot.Add(buttonBooster);
+                    newSlot.Add(imageBooster);
+                    newSlot.Add(labelNumber);
+
+                    m_BottomBarRoot.Add(newSlot);
+                }
+            }
+        }
+
         public void UpdateTopBarData()
         {
             m_CoinLabel.text = GameManager.Instance.Coins.ToString();
@@ -620,6 +662,8 @@ namespace Match3
 
         public void CreateBottomBar()
         {
+            EnsureEnoughSlots();
+
             int currentBonus = 0;
             foreach (var child in m_BottomBarRoot.Children())
             {
