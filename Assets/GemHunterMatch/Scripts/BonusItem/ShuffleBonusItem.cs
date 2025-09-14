@@ -67,6 +67,8 @@ namespace Match3
                 }
             }
 
+            CheckForMatchesAfterShuffle(allPositions);
+
             // 步驟5：播放音效
             if (shuffleSound != null)
             {
@@ -84,6 +86,42 @@ namespace Match3
                 Vector3Int temp = positions[i];
                 positions[i] = positions[randomIndex];
                 positions[randomIndex] = temp;
+            }
+        }
+
+        // 檢查 shuffle 後的 matches
+        private void CheckForMatchesAfterShuffle(List<Vector3Int> shuffledPositions)
+        {
+            // 使用 Coroutine 延遲檢查，讓 UI 先穩定
+            GameManager.Instance.StartCoroutine(DelayedMatchCheck(shuffledPositions));
+        }
+
+        // 延遲 match 檢查
+        private System.Collections.IEnumerator DelayedMatchCheck(List<Vector3Int> positions)
+        {
+            // 等待一個 frame 讓位置穩定
+            yield return null;
+
+            // 檢查所有 shuffled 位置是否有 match
+            foreach (var position in positions)
+            {
+                if (GameManager.Instance.Board.CellContent.TryGetValue(position, out var cell) &&
+                    cell.ContainingGem != null &&
+                    cell.ContainingGem.CurrentMatch == null)
+                {
+                    // 使用 Board 的私有方法檢查 match（我們需要通過反射或其他方式）
+                    // 或者直接添加到 match check queue
+                    var board = GameManager.Instance.Board;
+
+                    // 使用反射調用私有的 DoCheck 方法
+                    var methodInfo = board.GetType().GetMethod("DoCheck",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                    if (methodInfo != null)
+                    {
+                        methodInfo.Invoke(board, new object[] { position, true });
+                    }
+                }
             }
         }
     }
