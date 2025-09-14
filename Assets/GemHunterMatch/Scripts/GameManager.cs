@@ -323,6 +323,8 @@ namespace Match3
             existingItem.Amount -= 1;
             
             m_BonusModePrefab?.SetActive(false);
+            LevelData.Instance.DarkenBackground(false); // 確保背景恢復正常
+            UIHandler.Instance.UpdateBottomBar(); // 確保 UI 更新
             UIHandler.Instance.UpdateBottomBar();
             UIHandler.Instance.DeselectBonusItem();
         }
