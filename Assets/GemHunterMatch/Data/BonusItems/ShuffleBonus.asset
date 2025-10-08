@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ded876374efd1c44789e375487aa477e, type: 3}
   m_Name: ShuffleBonus
   m_EditorClassIdentifier: Assembly-CSharp::Match3.ShuffleBonusItem
-  DisplaySprite: {fileID: 21300000, guid: b3e8a413594507f4c8cb2c3fc3b7f0a0, type: 3}
+  DisplaySprite: {fileID: 21300000, guid: c0aa7ca0a434d234cbf47f64c68648f0, type: 3}
   NeedTarget: 0
   shuffleSound: {fileID: 8300000, guid: cbd6e7774d789364090f22bb0271cf88, type: 3}

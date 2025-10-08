@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,73 +10,155 @@ namespace Match3
         [Header("洗牌設定 / Shuffle Settings")]
         public AudioClip shuffleSound;
 
+        [Header("動畫設定 / Animation Settings")]
+        public float liftHeight = 3f;
+        public float liftDuration = 0.3f;
+        public float fallDuration = 0.6f;
+
+        [Tooltip("飛起的動畫曲線 - 在 Inspector 中調整為平滑上升")]
+        public AnimationCurve liftCurve;
+
+        [Tooltip("落下的動畫曲線 - 在 Inspector 中調整為加速下降")]
+        public AnimationCurve fallCurve;
+
         public override void Use(Vector3Int target)
         {
-            // 步驟1：收集所有可以移動的寶石和位置
+            GameManager.Instance.StartCoroutine(ShuffleWithAnimation());
+        }
+
+        private IEnumerator ShuffleWithAnimation()
+        {
+            GameManager.Instance.Board.ToggleInput(false);
+
+            if (shuffleSound != null)
+            {
+                GameManager.Instance.PlaySFX(shuffleSound);
+            }
+
+            // === 收集寶石 ===
             List<Gem> allGems = new List<Gem>();
             List<Vector3Int> allPositions = new List<Vector3Int>();
+            Dictionary<Gem, Vector3> originalPositions = new Dictionary<Gem, Vector3>();
 
             foreach (var kvp in GameManager.Instance.Board.CellContent)
             {
                 Vector3Int position = kvp.Key;
                 BoardCell cell = kvp.Value;
 
-                // 只處理有寶石且可以移動的格子，且不在 match 中
-                if (cell.ContainingGem != null && cell.CanBeMoved &&
-                    cell.ContainingGem.CurrentMatch == null)
+                if (cell.ContainingGem != null && cell.CanBeMoved)
                 {
-                    allGems.Add(cell.ContainingGem);
+                    Gem gem = cell.ContainingGem;
+                    allGems.Add(gem);
                     allPositions.Add(position);
+                    originalPositions[gem] = gem.transform.position;
                 }
             }
 
-            // 步驟2：如果寶石數量太少，就不執行洗牌
             if (allGems.Count < 2)
             {
-                Debug.Log("寶石數量太少，無法洗牌 / Not enough gems to shuffle");
-                return;
+                Debug.Log("寶石數量太少，無法洗牌");
+                GameManager.Instance.Board.ToggleInput(true);
+                yield break;
             }
 
-            // 步驟3：使用 Fisher-Yates 演算法洗牌位置陣列
+            // === 飛起動畫 ===
+            float elapsedTime = 0f;
+
+            while (elapsedTime < liftDuration)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsedTime / liftDuration);
+
+                // 如果沒有設定曲線，就用線性
+                float curveValue = (liftCurve != null && liftCurve.length > 0)
+                    ? liftCurve.Evaluate(t)
+                    : t;
+
+                foreach (var gem in allGems)
+                {
+                    if (gem != null && originalPositions.ContainsKey(gem))
+                    {
+                        Vector3 startPos = originalPositions[gem];
+                        Vector3 targetPos = startPos + Vector3.up * liftHeight;
+                        gem.transform.position = Vector3.Lerp(startPos, targetPos, curveValue);
+                        gem.transform.rotation = Quaternion.Euler(0, 0, curveValue * 180f);
+                    }
+                }
+
+                yield return null;
+            }
+
+            // === 洗牌 ===
             ShufflePositions(allPositions);
 
-            // 步驟4a：先清除所有舊位置的寶石引用
-            for (int i = 0; i < allGems.Count; i++)
-            {
-                Gem gem = allGems[i];
-                GameManager.Instance.Board.CellContent[gem.CurrentIndex].ContainingGem = null;
-            }
+            Dictionary<Gem, Vector3Int> newAssignments = new Dictionary<Gem, Vector3Int>();
 
-            // 步驟4b：再設定所有新位置
             for (int i = 0; i < allGems.Count; i++)
             {
                 Gem gem = allGems[i];
                 Vector3Int newPosition = allPositions[i];
 
-                // 設定新位置的寶石
+                GameManager.Instance.Board.CellContent[gem.CurrentIndex].ContainingGem = null;
+                newAssignments[gem] = newPosition;
+            }
+
+            foreach (var kvp in newAssignments)
+            {
+                Gem gem = kvp.Key;
+                Vector3Int newPosition = kvp.Value;
+
                 GameManager.Instance.Board.CellContent[newPosition].ContainingGem = gem;
-
-                // 更新寶石的位置資訊和實際座標
                 gem.MoveTo(newPosition);
-                gem.transform.position = GameManager.Instance.Board.GetCellCenter(newPosition);
+            }
 
-                // 重要：確保寶石狀態正確
-                gem.StopBouncing();
-                if (gem.CurrentState == Gem.State.Falling)
+            // === 落下動畫 ===
+            elapsedTime = 0f;
+            Dictionary<Gem, Vector3> liftedPositions = new Dictionary<Gem, Vector3>();
+            Dictionary<Gem, Vector3> targetPositions = new Dictionary<Gem, Vector3>();
+
+            foreach (var gem in allGems)
+            {
+                if (gem != null)
                 {
-                    gem.StopFalling();
+                    liftedPositions[gem] = gem.transform.position;
+                    targetPositions[gem] = GameManager.Instance.Board.GetCellCenter(gem.CurrentIndex);
                 }
             }
 
-            CheckForMatchesAfterShuffle(allPositions);
-
-            // 步驟5：播放音效
-            if (shuffleSound != null)
+            while (elapsedTime < fallDuration)
             {
-                GameManager.Instance.PlaySFX(shuffleSound);
+                elapsedTime += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsedTime / fallDuration);
+
+                // 如果沒有設定曲線，就用線性
+                float curveValue = (fallCurve != null && fallCurve.length > 0)
+                    ? fallCurve.Evaluate(t)
+                    : t;
+
+                foreach (var gem in allGems)
+                {
+                    if (gem != null && liftedPositions.ContainsKey(gem) && targetPositions.ContainsKey(gem))
+                    {
+                        gem.transform.position = Vector3.Lerp(liftedPositions[gem], targetPositions[gem], curveValue);
+                        gem.transform.rotation = Quaternion.Lerp(gem.transform.rotation, Quaternion.identity, curveValue);
+                    }
+                }
+
+                yield return null;
             }
 
-            Debug.Log($"洗牌完成！重新排列了 {allGems.Count} 個寶石 / Shuffle completed! Rearranged {allGems.Count} gems");
+            // === 確保到位 ===
+            foreach (var gem in allGems)
+            {
+                if (gem != null && targetPositions.ContainsKey(gem))
+                {
+                    gem.transform.position = targetPositions[gem];
+                    gem.transform.rotation = Quaternion.identity;
+                }
+            }
+
+            GameManager.Instance.Board.ToggleInput(true);
+            Debug.Log($"洗牌完成！重新排列了 {allGems.Count} 個寶石");
         }
 
         private void ShufflePositions(List<Vector3Int> positions)
@@ -86,42 +169,6 @@ namespace Match3
                 Vector3Int temp = positions[i];
                 positions[i] = positions[randomIndex];
                 positions[randomIndex] = temp;
-            }
-        }
-
-        // 檢查 shuffle 後的 matches
-        private void CheckForMatchesAfterShuffle(List<Vector3Int> shuffledPositions)
-        {
-            // 使用 Coroutine 延遲檢查，讓 UI 先穩定
-            GameManager.Instance.StartCoroutine(DelayedMatchCheck(shuffledPositions));
-        }
-
-        // 延遲 match 檢查
-        private System.Collections.IEnumerator DelayedMatchCheck(List<Vector3Int> positions)
-        {
-            // 等待一個 frame 讓位置穩定
-            yield return null;
-
-            // 檢查所有 shuffled 位置是否有 match
-            foreach (var position in positions)
-            {
-                if (GameManager.Instance.Board.CellContent.TryGetValue(position, out var cell) &&
-                    cell.ContainingGem != null &&
-                    cell.ContainingGem.CurrentMatch == null)
-                {
-                    // 使用 Board 的私有方法檢查 match（我們需要通過反射或其他方式）
-                    // 或者直接添加到 match check queue
-                    var board = GameManager.Instance.Board;
-
-                    // 使用反射調用私有的 DoCheck 方法
-                    var methodInfo = board.GetType().GetMethod("DoCheck",
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                    if (methodInfo != null)
-                    {
-                        methodInfo.Invoke(board, new object[] { position, true });
-                    }
-                }
             }
         }
     }
