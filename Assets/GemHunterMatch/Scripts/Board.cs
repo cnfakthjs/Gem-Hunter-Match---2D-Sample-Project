@@ -1062,8 +1062,12 @@ namespace Match3
 
             var gem = Instantiate(gemPrefab, m_Grid.GetCellCenterWorld(cell), Quaternion.identity);
             CellContent[cell].ContainingGem = gem;
+
+            // 加這行！強制套用 Prefab 的 Scale
+            gem.transform.localScale = gemPrefab.transform.localScale;
+
             gem.Init(cell);
-        
+
             return gem;
         }
 
