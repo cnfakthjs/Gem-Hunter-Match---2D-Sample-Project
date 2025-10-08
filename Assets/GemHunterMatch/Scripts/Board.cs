@@ -750,7 +750,7 @@ namespace Match3
                     if (gem.FallTime >= maxTime)
                     {
                         gem.transform.position = center;
-                        gem.transform.localScale = Vector3.one;
+                        // gem.transform.localScale = Vector3.one;
                         gem.StopBouncing();
 
                         m_TickingCells.RemoveAt(i);
@@ -761,8 +761,12 @@ namespace Match3
                     {
                         gem.transform.position =
                             center + Vector3.up * m_VisualSettingReference.BounceCurve.Evaluate(gem.FallTime);
+                        // 保持原始的 X 和 Z Scale，只改變 Y
+                        float originalScale = gem.transform.localScale.x;
                         gem.transform.localScale =
-                            new Vector3(1, m_VisualSettingReference.SquishCurve.Evaluate(gem.FallTime), 1);
+                            new Vector3(originalScale,
+                                       originalScale * m_VisualSettingReference.SquishCurve.Evaluate(gem.FallTime),
+                                       originalScale);
                     }
                 }
                 else if(currentCell.ContainingGem?.CurrentState == Gem.State.Still)
