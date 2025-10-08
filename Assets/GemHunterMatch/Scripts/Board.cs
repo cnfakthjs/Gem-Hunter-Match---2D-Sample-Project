@@ -293,7 +293,10 @@ namespace Match3
             if (s_Instance.m_MatchedCallback[cellPosition] == null)
                 s_Instance.m_MatchedCallback.Remove(cellPosition);
         }
-
+        public void CheckMatchAtPosition(Vector3Int position)
+        {
+            DoCheck(position);
+        }
         public static void RegisterSpawner(Vector3Int cell)
         {
             //Not super happy with that, but Startup is called before all Awake....
