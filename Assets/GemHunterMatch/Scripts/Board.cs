@@ -1069,11 +1069,20 @@ namespace Match3
 
         void ActivateSpawnerAt(Vector3Int cell)
         {
-            var gem = Instantiate(ExistingGems[Random.Range(0, ExistingGems.Length)], m_Grid.GetCellCenterWorld(cell + Vector3Int.up), Quaternion.identity);
+            // 先隨機選一個 Prefab
+            var gemPrefab = ExistingGems[Random.Range(0, ExistingGems.Length)];
+
+            // 用這個 Prefab 生成寶石
+            var gem = Instantiate(gemPrefab,
+                m_Grid.GetCellCenterWorld(cell + Vector3Int.up),
+                Quaternion.identity);
             CellContent[cell].IncomingGem = gem;
-        
+
+            // 強制套用 Prefab 的 Scale（修復 Scale 不一致的問題）
+            gem.transform.localScale = gemPrefab.transform.localScale;
+
             gem.StartMoveTimer();
-            gem.SpeedMultiplier = 1.0f; 
+            gem.SpeedMultiplier = 1.0f;
             m_NewTickingCells.Add(cell);
 
             if (m_EmptyCells.Contains(cell)) m_EmptyCells.Remove(cell);
