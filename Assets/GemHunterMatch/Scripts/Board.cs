@@ -106,6 +106,17 @@ namespace Match3
         {
             s_Instance = this;
             GetReference();
+
+            var allES = FindObjectsOfType<UnityEngine.EventSystems.EventSystem>(true);
+            if (allES.Length > 1)
+            {
+                Debug.LogWarning($"Found {allES.Length} EventSystems! Destroying extras.");
+                for (int i = 1; i < allES.Length; i++)
+                {
+                    Debug.Log($"Destroying EventSystem: {allES[i].gameObject.name}", allES[i]);
+                    Destroy(allES[i].gameObject);
+                }
+            }
         }
 
         private void Start()
@@ -1325,6 +1336,8 @@ namespace Match3
 
             return true;
         }
+
+
 
         void CheckInput()
         {
