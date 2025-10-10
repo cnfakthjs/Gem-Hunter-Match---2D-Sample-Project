@@ -479,6 +479,71 @@ namespace Match3
                     NewGemAt(idx, m_GemLookup[chosenGem]);
                 }
             }
+
+            FixInitialMatches();
+
+        }
+
+        void FixInitialMatches()
+        {
+            bool foundMatch = true;
+            int maxAttempts = 100; // 避免無限循環
+            int attempts = 0;
+
+            while (foundMatch && attempts < maxAttempts)
+            {
+                foundMatch = false;
+                attempts++;
+
+                foreach (var (cellPos, content) in CellContent)
+                {
+                    if (content.ContainingGem == null)
+                        continue;
+
+                    // 檢查是否有三連（不建立 match）
+                    if (DoCheck(cellPos, false))
+                    {
+                        foundMatch = true;
+
+                        // 重新選一個不會造成三連的寶石類型
+                        var availableGems = m_GemLookup.Keys.ToList();
+
+                        // 檢查四周，移除會造成三連的類型
+                        Vector3Int[] directions = new[]
+                        {
+                    Vector3Int.left, Vector3Int.right,
+                    Vector3Int.up, Vector3Int.down
+                };
+
+                        foreach (var dir in directions)
+                        {
+                            var neighbor1 = cellPos + dir;
+                            var neighbor2 = cellPos + dir * 2;
+
+                            if (CellContent.TryGetValue(neighbor1, out var n1) &&
+                                CellContent.TryGetValue(neighbor2, out var n2) &&
+                                n1.ContainingGem != null && n2.ContainingGem != null &&
+                                n1.ContainingGem.GemType == n2.ContainingGem.GemType)
+                            {
+                                availableGems.Remove(n1.ContainingGem.GemType);
+                            }
+                        }
+
+                        // 銷毀舊寶石，生成新寶石
+                        if (availableGems.Count > 0)
+                        {
+                            Destroy(content.ContainingGem.gameObject);
+                            var newType = availableGems[Random.Range(0, availableGems.Count)];
+                            NewGemAt(cellPos, m_GemLookup[newType]);
+                        }
+                    }
+                }
+            }
+
+            if (attempts >= maxAttempts)
+            {
+                Debug.LogWarning("FixInitialMatches 達到最大嘗試次數，可能仍有三連");
+            }
         }
 
         private void Update()
